@@ -14,9 +14,11 @@ local GLOB_PATTERN = '*.{jpg,jpeg,png,gif,bmp,ico,tiff,pnm,dds,tga}'
 ---@class BackDrops
 ---@field current_idx number index of current image
 ---@field images string[] background images
+---@field origin_images string[] background images
+---@field acrylic_images string[] background images
 ---@field images_dir string directory of background images. Default is `wezterm.config_dir .. '/backdrops/'`
 ---@field focus_color string background color when in focus mode. Default is `colors.custom.background`
----@field focus_on boolean focus mode on or off
+---@field mode number 0: image 1: acrylic_image 2: focus
 local BackDrops = {}
 BackDrops.__index = BackDrops
 
@@ -58,7 +60,19 @@ end
 ---   This throws a coroutine error if the function is invoked in outside of `wezterm.lua` in the -
 ---   initial load of the Terminal config.
 function BackDrops:set_images()
-    self.images = wezterm.glob(self.images_dir .. GLOB_PATTERN)
+    local all_files = wezterm.glob(self.images_dir .. GLOB_PATTERN)
+    self.images = {}
+    self.origin_images = {}
+    self.acrylic_images = {}
+
+    for _, file in ipairs(all_files) do
+        if string.find(file, '%.acrylic%.') then
+            table.insert(self.acrylic_images, file)
+        else
+            table.insert(self.origin_images, file)
+        end
+    end
+    self.images = self.acrylic_images
     return self
 end
 
@@ -73,7 +87,8 @@ end
 ---Create the `background` options with the current image
 ---@private
 ---@return table
-function BackDrops:_create_opts()
+function BackDrops:_create_origin_opts()
+    self.images = self.origin_images
     return {
         {
             source = { File = self.images[self.current_idx] },
@@ -86,6 +101,19 @@ function BackDrops:_create_opts()
             vertical_offset = '-10%',
             horizontal_offset = '-10%',
             opacity = 0.96,
+        },
+    }
+end
+
+---Create the `background` options with the current image with acrylic
+---@private
+---@return table
+function BackDrops:_create_acrylic_opts()
+    self.images = self.acrylic_images
+    return {
+        {
+            source = { File = self.images[self.current_idx] },
+            horizontal_align = 'Center',
         },
     }
 end
@@ -106,18 +134,17 @@ function BackDrops:_create_focus_opts()
     }
 end
 
----Set the initial options for `background`
----@param focus_on boolean? focus mode on or off
-function BackDrops:initial_options(focus_on)
-    focus_on = focus_on or false
-    assert(type(focus_on) == 'boolean', 'BackDrops:initial_options - Expected a boolean')
-
-    self.focus_on = focus_on
-    if focus_on then
+---Create the `background` options with the current image
+---@private
+---@return table
+function BackDrops:_create_opts()
+    if self.mode == 0 then
+        return self:_create_origin_opts()
+    elseif self.mode == 1 then
+        return self:_create_acrylic_opts()
+    else
         return self:_create_focus_opts()
     end
-
-    return self:_create_opts()
 end
 
 ---Override the current window options for background
@@ -131,24 +158,13 @@ function BackDrops:_set_opt(window, background_opts)
     })
 end
 
----Override the current window options for background with focus color
----@private
----@param window any WezTerm Window see: https://wezfurlong.org/wezterm/config/lua/window/index.html
-function BackDrops:_set_focus_opt(window)
-    local opts = {
-        background = {
-            {
-                source = { Color = self.focus_color },
-                height = '120%',
-                width = '120%',
-                vertical_offset = '-10%',
-                horizontal_offset = '-10%',
-                opacity = 1,
-            },
-        },
-        enable_tab_bar = window:effective_config().enable_tab_bar,
-    }
-    window:set_config_overrides(opts)
+---Set the initial options for `background`
+---@param mode number? mode: 0: image 1: acrylic image 2: focus on
+function BackDrops:initial_options(mode)
+    mode = tonumber(mode) or 0
+    assert(mode >= 0 and mode <= 2, 'BackDrops:initial_options - Expected mode to be 0, 1, or 2')
+    self.mode = mode
+    return self:_create_opts()
 end
 
 ---Convert the `files` array to a table of `InputSelector` choices
@@ -210,20 +226,18 @@ function BackDrops:set_img(window, idx)
     self:_set_opt(window, self:_create_opts())
 end
 
----Toggle the focus mode
+---Toggle the mode
 ---@param window any WezTerm `Window` see: https://wezfurlong.org/wezterm/config/lua/window/index.html
-function BackDrops:toggle_focus(window)
-    local background_opts
-
-    if self.focus_on then
-        background_opts = self:_create_opts()
-        self.focus_on = false
+function BackDrops:toggle_backdrop_mode(window)
+    if self.mode == 0 then
+        self.mode = 1
+    elseif self.mode == 1 then
+        self.mode = 2
     else
-        background_opts = self:_create_focus_opts()
-        self.focus_on = true
+        self.mode = 0
     end
 
-    self:_set_opt(window, background_opts)
+    self:_set_opt(window, self:_create_opts())
 end
 
 return BackDrops:init()

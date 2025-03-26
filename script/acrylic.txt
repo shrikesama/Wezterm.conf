@@ -1,0 +1,12 @@
+[0:0]libplacebo=format=yuvj444p:colorspace=bt470bg:color_primaries=bt709:color_trc=iec61966-2-1:range=pc[transfered];
+[transfered]gblur=sigma=50:steps=6[blured];
+[blured]drawbox=x=0:y=0:w=iw:h=ih:color=#1f1f28@0.8:t=fill[tinted];
+[tinted]split=outputs=2[tinted1][tinted2];
+[tinted1]eq=brightness=0.03:contrast=1.05:saturation=0.8[equalized1];
+[tinted2]eq=brightness=0.03:contrast=1.05:saturation=0.8[equalized2];
+[equalized1]noise=alls=2:allf=u[output1];
+[equalized2]libplacebo=deband=true:deband_iterations=3:deband_radius=16:deband_threshold=2:dithering=ordered:dither_lut_size=8[debanded];
+[debanded]noise=alls=2:allf=u[output2];
+
+
+libplacebo=format=yuvj444p:colorspace=bt470bg:color_primaries=bt709:color_trc=iec61966-2-1:range=pc,gblur=sigma=50:steps=6,drawbox=x=0:y=0:w=iw:h=ih:color=#1f1f28@0.8:t=fill,eq=brightness=0.03:contrast=1.05:saturation=0.8,libplacebo=deband=true:deband_iterations=3:deband_radius=16:deband_threshold=2:dithering=ordered:dither_lut_size=8,noise=alls=2:allf=u

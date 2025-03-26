@@ -1,7 +1,6 @@
 local gpu_adapters = require('utils.gpu-adapter')
 local backdrops = require('utils.backdrops')
 local colors = require('colors.custom')
-local wezterm = require('wezterm')
 
 return {
     max_fps = 120,
@@ -23,8 +22,8 @@ return {
     colors = colors,
 
     -- background
-    -- set to true if you want wezterm to start on focus mode
-    background = backdrops:initial_options(false),
+    -- set mode of backdrops: 0: image 1: acrylic iamge 2: focus mode
+    background = backdrops:initial_options(1),
 
     -- scrollbar
     enable_scroll_bar = false,
