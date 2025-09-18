@@ -33,19 +33,19 @@ local cn_font_linux = {
 }
 
 local cn_font;
+local font_size = 13
 
 if platform.is_mac then
     cn_font = cn_font_macos
+    font_size = 18
 elseif platform.is_win then
+    font_size = 13
     cn_font = cn_font_window
 else
     cn_font = cn_font_linux
 end
 
 local font = wezterm.font_with_fallback({ en_font, cn_font })
-
--- local font_size = platform.is_mac and 14 or 14
-local font_size = 13
 
 return {
     font = font,
