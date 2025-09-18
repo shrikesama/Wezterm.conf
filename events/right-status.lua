@@ -58,6 +58,38 @@ local function set_active(window)
     mark_changed()
 end
 
+local function resolve_window_title(gw, mw)
+    if not gw then return '' end
+    if not mw then
+        local ok, got = pcall(function()
+            return gw:mux_window()
+        end)
+        if not ok then return '' end
+        mw = got
+    end
+    if not mw or not mw.get_title then return '' end
+    local ok, got = pcall(function()
+        return mw:get_title()
+    end)
+    return (ok and got) or ''
+end
+
+local function refresh_titles()
+    local changed = false
+    for _ws, wins in pairs(status.windows_by_ws) do
+        for _, rec in ipairs(wins) do
+            local title = resolve_window_title(rec.gw)
+            if rec.title ~= title then
+                rec.title = title
+                changed = true
+            end
+        end
+    end
+    if changed then
+        mark_changed()
+    end
+end
+
 local function set_status()
     -- workspaces
     local names
@@ -100,13 +132,7 @@ local function set_status()
             end
             -- cache current title; it may change later, but this is cheap and avoids
             -- recomputing for every render when nothing changed.
-            local title = ''
-            if mw and mw.get_title then
-                local ok, got = pcall(function()
-                    return mw:get_title()
-                end)
-                title = (ok and got) or ''
-            end
+            local title = resolve_window_title(gw, mw)
             table.insert(t, { id = gw:window_id(), gw = gw, title = title })
         end
     end
@@ -141,6 +167,8 @@ local function render_from_cache(window)
     if expected ~= current then
         set_status()
     end
+
+    refresh_titles()
 
     if status.rendered[wid] == status.version then return end
 
